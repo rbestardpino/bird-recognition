@@ -1,7 +1,9 @@
-import tensorflow as tf
-from tensorflow import keras
-from keras import layers
+from time import process_time
+
 import matplotlib.pyplot as plt
+import tensorflow as tf
+from keras import layers
+from tensorflow import keras
 
 image_size = (224, 224)
 batch_size = 32
@@ -11,9 +13,9 @@ def main():
     train_ds, val_ds = preprocess_data()
     # input_sape es el formato de la imagen de entrada
     # num_classes es la cantidad de pajaros que vamos a analizar,
-    model = make_model(input_shape=image_size + (3,), num_classes=5)
-    keras.utils.plot_model(model, show_shapes=True)
-    train_model(model, train_ds, val_ds)
+    # model = make_model(input_shape=image_size + (3,), num_classes=5)
+    # keras.utils.plot_model(model, show_shapes=True)
+    # train_model(model, train_ds, val_ds)
 
 
 def preprocess_data():
@@ -33,15 +35,17 @@ def preprocess_data():
         image_size=image_size,
         batch_size=batch_size,
     )
+    train_ds = train_ds.prefetch(buffer_size=32)
+    val_ds = val_ds.prefetch(buffer_size=32)
 
-    plt.figure(figsize=(10, 10))
-    for images, labels in train_ds.take(1):
-        for i in range(9):
-            ax = plt.subplot(3, 3, i + 1)
-            plt.imshow(images[i].numpy().astype("uint8"))
-            plt.show()
-            plt.title(int(labels[i]))
-            plt.axis("off")
+    # plt.figure(figsize=(10, 10))
+    # for images, labels in train_ds.take(1):
+    #     for i in range(9):
+    #         ax = plt.subplot(3, 3, i + 1)
+    #         plt.imshow(images[i].numpy().astype("uint8"))
+    #         plt.show()
+    #         plt.title(int(labels[i]))
+    #         plt.axis("off")
 
     return train_ds, val_ds
 
@@ -57,10 +61,12 @@ def make_model(input_shape, num_classes):
     x = data_augmentation(inputs)
 
     # Entry block
-    x = layers.Rescaling(1.0 / 255)(x) # Pasa de un rango de [0,255] a [0,1]
+    x = layers.Rescaling(1.0 / 255)(x)  # Pasa de un rango de [0,255] a [0,1]
+    x = layers.Conv2D(32, 3, strides=2, padding="same")(x)
     x = layers.BatchNormalization()(x)
-    x = layers.Activation("sigmoid")(x)
+    x = layers.Activation("relu")(x)
 
+    x = layers.Conv2D(64, 3, padding="same")(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation("relu")(x)
 
@@ -89,7 +95,7 @@ def make_model(input_shape, num_classes):
     x = layers.Activation("relu")(x)
 
     x = layers.GlobalAveragePooling2D()(x)
-    if num_classes == 2:
+    if num_classes == 5:
         activation = "sigmoid"
         units = 1
     else:
@@ -102,7 +108,7 @@ def make_model(input_shape, num_classes):
 
 
 def train_model(model, train_ds, val_ds):
-    epochs = 50
+    epochs = 2
 
     callbacks = [
         keras.callbacks.ModelCheckpoint("save_at_{epoch}.h5"),
@@ -118,5 +124,8 @@ def train_model(model, train_ds, val_ds):
 
 
 if __name__ == '__main__':
+    t1_start = process_time()
     main()
-    print("FIN")
+    t1_stop = process_time()
+    print("------------FIN------------\n", "Elapsed time during the whole program in seconds:",
+          t1_stop - t1_start)
